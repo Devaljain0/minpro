@@ -1,16 +1,15 @@
-import java.util.ArrayList;
+
 import java.util.Scanner;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.PreparedStatement;
-
-import static java.lang.Class.*;
+import java.sql.ResultSet;
 
 class createdv
-{
+{ //establish method for connecting databases
     static Connection con;
-    public static Connection create() throws RuntimeException { 
+    public static Connection create() throws RuntimeException {   
         final String driver_class="com.mysql.cj.jdbc.Driver";
         try
         {
@@ -25,26 +24,27 @@ class createdv
         {
             s.printStackTrace();
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
         return con;
     }
 }
 class bookdalo{
-    public static boolean insertbook (book bk){
+    //method to add book to database
+    public static boolean insertbook (Book bk){  
         boolean f = false;
     try{
-        Connection co = createdv.create();
-        String q = "insert into book(id, title, author) values(?, ?, ?)";
-        PreparedStatementt pstmt =con.prepareStatement(q);
-        pstmt.setString(1, bk.getId());
-        pstmt.setStringg(2, bk.getName());
+        Connection con = createdv.create();
+        String q = "insert into availbook(id, title, author) values(?, ?, ?)";
+        PreparedStatement pstmt = con.prepareStatement(q);
+        pstmt.setInt(1, bk.getId());
+        pstmt.setString(2, bk.getTitle());
         pstmt.setString(3, bk.getAuthor());
 
         pstmt.executeUpdate();
         f = true;
     }
-    catch(Exceptiom e){
+    catch(Exception e){
         e.printStackTrace();
     } 
     
@@ -53,7 +53,7 @@ class bookdalo{
     }
 }
 
-
+//Book and its attributes
 class Book {
     private int id;
     private String title;
@@ -99,148 +99,230 @@ class Book {
 }
 
 class Library {
-    private ArrayList<Book> books = new ArrayList<>();
-    private int nextId = 1;
+   
+    // method to display the details of database bookavail 
+    public void displayAllBooks() { 
 
-    public void addBook(String title, String author) {
-        Book book = new Book(nextId, title, author);
-        books.add(book);
-        nextId++;
+           System.out.println("Library Catalog:");
+
+         try{
+
+        Connection con = createdv.create();
+        String q = "select * from availbook";
+        PreparedStatement pstmt = con.prepareStatement(q);
+        ResultSet rs = pstmt.executeQuery();
+        while(rs.next()){
+        int id = rs.getInt("id");
+        String title = rs.getString("title");
+        String author = rs.getString("author");
+        System.out.println(id +" " + title +" "+ author );
+       }
+        
+    }
+    catch(Exception e){
+        e.printStackTrace();
+    } 
+     
+
     }
 
-    public void displayAllBooks() {
-        System.out.println("Library Catalog:");
-        for (Book book : books) {
-            System.out.println(book);
-        }
+    //method for finding book by its unique id in database
+    public static Book findBookById(int id) {
+                 try{
+            
+        Connection con = createdv.create();
+        String q = "select * from availbook where id = ?";
+        PreparedStatement pstmt = con.prepareStatement(q);
+     
+        pstmt.setInt(1, id);
+         ResultSet rs = pstmt.executeQuery();
+         while(rs.next()){
+         String title = rs.getString("title");
+         String author = rs.getString("author");
+         System.out.println(id +" " + title +" "+ author );
+         }
     }
+    catch(Exception e){
+        e.printStackTrace();
+    } 
+     
 
-    public Book findBookById(int id) {
-        for (Book book : books) {
-            if (book.getId() == id) {
-                return book;
-            }
-        }
         return null;
     }
+    // method to borrow book 
+    public void borrowBook(int id, String borrower) {
+        try{
+         Connection con = createdv.create();
+         String q2 = "select * from availbook where id = ?";
+         PreparedStatement pstmt2 = con.prepareStatement(q2);
+         String title=null ;
+         String author =null;
+     
+         pstmt2.setInt(1, id);
+         ResultSet rs = pstmt2.executeQuery();
+         if(rs.next()){
+         title = rs.getString("title");
+         author = rs.getString("author");
+        
+         
+ 
 
-    public void borrowBook(int id) {
-        Book book = findBookById(id);
-        if (book != null) {
-            if (book.isAvailable()) {
-                book.borrow();
-                System.out.println("Book borrowed successfully.");
-            } else {
-                System.out.println("Book is not available for borrowing.");
-            }
-        } else {
-            System.out.println("Book not found.");
-        }
+        String q1 ="insert into returnbook(id, title , author, name2) values (?, ?, ?, ?)";
+         PreparedStatement pstmt1= con.prepareStatement(q1);
+         pstmt1.setInt(1,id);
+         pstmt1.setString(2,title);
+         pstmt1.setString(3,author);
+         pstmt1.setString(4,borrower);
+         pstmt1.executeUpdate();
+         }
+          String q = "delete  from availbook where id = ?";
+          PreparedStatement pstmt = con.prepareStatement(q);
+          pstmt.setInt(1, id);
+          pstmt.executeUpdate();
+       
+        System.out.println("Borrowed Succesfully. ");
+       
+       
+        
     }
+    catch(Exception e){
+        e.printStackTrace();
+    } 
+     
 
-    public void returnBook(int id) {
-        Book book = findBookById(id);
-        if (book != null) {
-            if (!book.isAvailable()) {
-                book.returnBook();
-                System.out.println("Book returned successfully.");
-            } else {
-                System.out.println("Book is already available.");
-            }
-        } else {
-            System.out.println("Book not found.");
-        }
+    }
+    
+    //method to return book
+    public void returnBook(int id) { 
+        try{
+            
+        Connection con = createdv.create();
+        
+        String q2 = "select * from returnbook where id = ?";
+         PreparedStatement pstmt2 = con.prepareStatement(q2);
+         String title=null ;
+         String author =null;
+         pstmt2.setInt(1, id);
+         ResultSet rs = pstmt2.executeQuery();
+         
+         if(rs.next()){
+         title = rs.getString("title");
+         author = rs.getString("author");
+         String q1 ="insert into availbook(id, title , author ) values (?, ?, ?)";
+         PreparedStatement pstmt1= con.prepareStatement(q1);
+         pstmt1.setInt(1,id);
+         pstmt1.setString(2,title);
+         pstmt1.setString(3,author);
+         pstmt1.executeUpdate();
+         }
+
+          String q = "delete  from returnbook where id = ?";
+          PreparedStatement pstmt = con.prepareStatement(q);
+          pstmt.setInt(1, id);
+          pstmt.executeUpdate();
+         System.out.println("Returned Successfully.");
+       
+    }
+    catch(Exception e){
+        e.printStackTrace();
+    } 
+        
     }
 }
-
+//main class
 public class here {
     public static void main(String[] args) {
         Library library = new Library();
         Scanner scanner = new Scanner(System.in);
-
+        //library management system and its menu
         while (true) {
             System.out.println("\nLibrary Management System Menu:");
             System.out.println("1. Add Book");
-            System.out.println("2. Display All Books");
+            System.out.println("2. Display All Available Books");
             System.out.println("3. Find Book by ID");
             System.out.println("4. Borrow Book");
             System.out.println("5. Return Book");
             System.out.println("6. Exit");
             System.out.print("Enter your choice: ");
-
-            int choice;
-            try {
-                choice = Integer.parseInt(scanner.nextLine());
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please enter a valid choice.");
-                continue;
-            }
+ 
+         try{   
+            int choice= Integer.parseInt(scanner.nextLine());
+         
+            
 
             switch (choice) {
+
+                //choice 1 to add book
                 case 1:
                    System.out.println("Enter book id:");
-                   int id= scanner.nextInt();
+                  try{ int id= Integer.parseInt(scanner.nextLine());
 
-                    System.out.print("Enter book title: ");
-                    String title = scanner.nextLine();
-                    System.out.print("Enter book author: ");
-                    String author = scanner.nextLine();
-                    library.addBook(title, author);
+                     System.out.print("Enter book title: ");
+                     String title = scanner.nextLine();
+                     System.out.print("Enter book author: ");
+                     String author = scanner.nextLine();
+                
                      Book bk = new Book(id, title, author);
                      boolean answer = bookdalo.insertbook(bk);
                      if(answer==true){
                 
                     System.out.println("Book added successfully.");
                      }
+                    }
+                   catch (NumberFormatException e) {
+                        System.out.println("Invalid input. Please enter a valid book ID.");
+                        continue;
+                    }
                      break;
+
+                     //choice 2 to display books 
                 case 2:
                     library.displayAllBooks();
                     break;
+
+                    //choice 3 to find book yy id
                 case 3:
                     System.out.print("Enter book ID: ");
-                    int id;
-                    try {
-                        id = Integer.parseInt(scanner.nextLine());
-                    } catch (NumberFormatException e) {
-                        System.out.println("Invalid input. Please enter a valid book ID.");
-                        continue;
-                    }
-                    Book foundBook = library.findBookById(id);
-                    if (foundBook != null) {
-                        System.out.println(foundBook);
-                    } else {
-                        System.out.println("Book not found.");
-                    }
+                    int id1= Integer.parseInt(scanner.nextLine());
+                   
+                    Library.findBookById(id1);                  
                     break;
+
+                    //choice 4 to borrow book by id
                 case 4:
-                    System.out.print("Enter book ID to borrow: ");
-                    int borrowId;
-                    try {
-                        borrowId = Integer.parseInt(scanner.nextLine());
-                    } catch (NumberFormatException e) {
-                        System.out.println("Invalid input. Please enter a valid book ID.");
-                        continue;
-                    }
-                    library.borrowBook(borrowId);
+                    System.out.println("Enter book ID to borrow: ");
+                    int borrowId  =  Integer.parseInt(scanner.nextLine());
+                    System.out.println("Enter name of the borrower: ");
+                    String borrower = scanner.nextLine();
+                   
+                    library.borrowBook(borrowId, borrower);
                     break;
+
+                    //choice 5 to return book by id
                 case 5:
-                    System.out.print("Enter book ID to return: ");
-                    int returnId;
-                    try {
-                        returnId = Integer.parseInt(scanner.nextLine());
-                    } catch (NumberFormatException e) {
-                        System.out.println("Invalid input. Please enter a valid book ID.");
-                        continue;
-                    }
-                    library.returnBook(returnId);
-                    break;
+                     System.out.println("Enter book id to return");
+                     int id2 = Integer.parseInt(scanner.nextLine());
+                     
+                     library.returnBook(id2);
+                     break;
+                    
+                    //choice 6 to exit the system
                 case 6:
                     System.out.println("Exiting the Library Management System. Goodbye!");
                     scanner.close();
                     System.exit(0);
+                    break;
+                
+
                 default:
                     System.out.println("Invalid choice. Please try again.");
             }
+        }
+        catch (NumberFormatException e) {  //Exception handling
+                       e.printStackTrace();
+                        continue;
+                    }
+
         }
     }
 }
